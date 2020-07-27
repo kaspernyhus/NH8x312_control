@@ -5,36 +5,45 @@ ARDUINO NANO
 ---------------------------------
 
 TFT | Function  | AVR
----------------------------------
+------------------------
 1   | Backlight | 5v     
 2   | MISO      | 
-3   | SCK       | PB5
-4   | MOSI      | PB3 / SDA
-5   | TFT sel   | GND
+3   | SCK       | PB5 [D13]
+4   | MOSI      | PB3 (SDA) [D11]
+5   | TFT sel   | PB2 (CS)  [D10]
 6   | SD sel    | 
-7   | D/C       | PB1 (Data/Command)
-8   | Reset     | PB0
+7   | D/C       | PB0 (Data/Command) (0=command, 1=data) [D8]
+8   | Reset     | PB1 [D9]
 9   | VCC       | 5v
 10  | GND       | GND
----------------------------------
+-------------------------
+
+    Phisical pins - Top view
+ ____________________________
+| 9 10 10 nc nc nc 3 4 7 8 5 |
+|----------------------------|
+|                            |
+|                            |
+|                            |
+|                            |
+
 
 http://w8bh.net/avr/AvrTFT.pdf
 */
-
 
 /* 
 ---------------------------------
     ST7735 ROUTINES
 --------------------------------- */
 #define SWRESET 0x01  // software reset
-#define SLPOUT 0x11   // sleep out
+#define SLPOUT  0x11   // sleep out
 #define DISPOFF 0x28  // display off
-#define DISPON 0x29   // display on
-#define CASET 0x2A    // column address set
-#define RASET 0x2B    // row address set
-#define RAMWR 0x2C    // RAM write
-#define MADCTL 0x36   // axis control
-#define COLMOD 0x3A   // color mode
+#define DISPON  0x29   // display on
+#define CASET   0x2A    // column address set
+#define RASET   0x2B    // row address set
+#define RAMWR   0x2C    // RAM write
+#define MADCTL  0x36   // axis control
+#define COLMOD  0x3A   // color mode
 
 // 1.8" TFT display constants
 #define _width 128
@@ -54,9 +63,6 @@ http://w8bh.net/avr/AvrTFT.pdf
 
 
 
-void writeData(uint8_t data);
-void writeCommand(uint8_t cmd);
-void resetDisplay();
 void Init_st7735_SPI();
 
 void clearScreen();
@@ -67,7 +73,6 @@ void drawPixel(uint8_t x, uint8_t y, uint16_t color);
 void drawFastHLine(uint8_t y, uint8_t x0, uint8_t x1, uint16_t color);
 void drawFastVLine(uint8_t x, uint8_t y0, uint8_t y1, uint16_t color);
 void drawChar(uint8_t ch, uint8_t x, uint8_t y, uint16_t color, uint16_t bg_color);
-
 
 
 

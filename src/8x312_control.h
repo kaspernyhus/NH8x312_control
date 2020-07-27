@@ -29,7 +29,7 @@ void updateLEDs();
 
 void SQselect(uint8_t Square, uint8_t active);
 
-void setInsertState(uint8_t SQ, uint8_t ch, uint8_t state);
+void setInsertState(uint8_t Square, uint8_t ch, uint8_t state);
 
 void drawInsertState();
 void setLED(uint8_t LED, uint8_t state);
@@ -47,8 +47,40 @@ extern uint8_t SQ[32][2]; // (x,y) for the 32 insert squares
 
 
 
+extern uint8_t SQlayout[8][4][2];
+
+
+
+
+//---------------------------------------------------//
+struct Slot
+{
+  uint8_t Insert;
+  uint8_t State;
+};
+
+struct channel
+{
+  uint8_t CH_enable; // CIE - Channel Insert Enable
+  struct Slot Slots[4];
+};
+
+volatile struct channel InsertStates[8];
+
+
+volatile uint8_t InsSelected;
+volatile uint8_t SelectActive;
+
+volatile uint8_t CHselected;
+volatile uint8_t SLOTselected;
+volatile uint8_t SLOTactive[8][4];
+
+
+void setNewInsertState(uint8_t Channel, uint8_t Slot, uint8_t Insert, uint8_t State);
+void drawInsertStates();
+//---------------------------------------------------//
+
 // System variables
-extern uint8_t insert_states[32][2]; // [CH insert SQ][0] = insert char (ASCII), [CH insert SQ][1] = insert OUT/IN (Inactive(0)/ OUT (Red(1)) / IN(Green(2)))
 extern uint8_t LED_states[8];
 volatile uint8_t last_buttons;
 volatile uint8_t old_insert_state;

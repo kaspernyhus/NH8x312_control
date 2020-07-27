@@ -70,3 +70,26 @@ void bob(char str[], int value) {
   sprintf(c_buffer, "%d\r\n", value);
   UART0_puts(c_buffer);
 }
+
+
+// Up to 16-bits
+void UART0_printBits(char str[], uint32_t bitValue, uint16_t bitdepth) {
+  UART0_puts(str);
+
+  if (bitdepth > 16) {
+    UART0_puts("Error");
+    return;
+  }
+  
+  for (int i=0; i<bitdepth; i++) {
+    int bit_mask = (1<<(bitdepth-1));
+    int nextBit = ((bitValue<<i) & bit_mask);
+    if (nextBit == 0) {
+      UART0_sendChar('0');
+    }
+    else {
+      UART0_sendChar('1');
+    }
+  }
+  UART0_puts("\r\n");
+}

@@ -55,9 +55,9 @@ PC6 (RESET)
 #include <avr/io.h>
 
 
-#define BG_COLOR 0x196F
+#define BG_COLOR 0x396F
 #define TEXT_COLOR 0xFFFF
-#define FLASH_RATE 999 
+#define FLASH_RATE 50 
 
 
 
@@ -74,10 +74,12 @@ PC6 (RESET)
 #define RED 0xE8E4
 #define GREEN 0x3DA9
 #define LIME 0x07E0
+#define PINK 0xF96F
 #define CYAN0 x07FF
 #define MAGENTA 0xF81F
 #define YELLOW 0xFFE0
 #define WHITE 0xFFFF
+#define DARKERGRAY 0x8C71
 #define DARKGRAY 0xA514
 #define LIGHTGRAY 0xBDD8
 
@@ -85,6 +87,4 @@ PC6 (RESET)
 // ----------------- //
 //    STATE MACHINE
 // ----------------- //
-extern uint8_t SQselected;
-extern uint8_t InsSelected;
-extern uint8_t SelectActive;
+

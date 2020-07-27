@@ -9,7 +9,9 @@ DISPLAY Module for 8x312+4 project
 #include "config.h"
 #include "st7735.h"
 
+uint8_t SQlayout[8][4][2];
 
 void drawBaseLayout();
+void drawSquare(uint8_t channel, uint8_t slot, uint8_t InsertCHAR, uint16_t color);
 
 

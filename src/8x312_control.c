@@ -7,6 +7,67 @@ CONTROL Module for 8x312+4 project
 #include "8x312_control.h"
 
 
+uint8_t SQselected = 0;
+volatile uint8_t SelectActive = 0;
+volatile uint8_t InsSelected = 0;
+
+
+/*
+-------------------------------------------
+PRINTF DEBUGING
+-------------------------------------------*/
+void print_SLOTactive() {
+  for (int Channel=0; Channel<8; Channel++) {
+    for (int Slot=0; Slot<4; Slot++) {
+      char string[12];
+      sprintf(string,"CH%d/Slot%d: ",Channel,Slot);
+      UART0_printBits(string, SLOTactive[Channel][Slot],8);
+    }
+  }
+}
+void print_InsertStates() {
+  UART0_puts("------------------\r\n");
+  for (int Channel=0; Channel<8; Channel++) {
+    for (int Slot=0; Slot<4; Slot++) {
+      char string[12];
+      sprintf(string,"CH%d/Slot%d: \r\n",Channel,Slot);
+      UART0_puts(string);
+      UART0_printBits("Insert: ", InsertStates[Channel].Slots[Slot].Insert,4);
+      UART0_printBits("State: ", InsertStates[Channel].Slots[Slot].State,4);
+      UART0_puts("------------------\r\n");
+    }
+  }
+}
+void print_Channels() {
+  UART0_puts("------------------\r\n");
+  for (int Channel=0; Channel<12; Channel++) {
+    char string[12];
+    sprintf(string,"CH%d: \r\n",Channel);
+    UART0_puts(string);
+    UART0_printBits("Relays: ", channels[Channel],8);
+    UART0_puts("------------------\r\n");
+  }
+}
+//-------------------------------------------//
+
+
+
+
+
+/*
+-------------------------------------------
+INITIALIZATION
+-------------------------------------------*/
+volatile struct channel InsertStates[8] = {0x00};
+
+
+void Init_SLOTactivation() { // Make first slot for each channel active
+  SLOTactive[8][4] = 0x00;
+  for (int i=0; i<8; i++) {
+    SLOTactive[i][0] = 1;
+  }
+}
+
 
 void Init_8x312() {
   UART0_Init(MYUBRR);
@@ -24,17 +85,20 @@ void Init_8x312() {
 
   //Init_relays();
 
-  SQselected = 0x00;
-  SelectActive = 0x00;
+  SelectActive = 0;
+  CHselected = 0;
+  SLOTselected = 0;
+  
+  Init_SLOTactivation();
 
-  DDRC |= (1<<PC2); //test LED
+  // DDRC |= (1<<PC2); //test LED
 }
 
 
 
 /*
 -------------------------------------------
-DISPLAY
+DISPLAY UPDATES
 -------------------------------------------*/
 void updateBaseLayout() {
   drawBaseLayout();
@@ -44,58 +108,126 @@ void updateBaseLayout() {
 void updateScreen() {
   if (timer_update == 1) {
     timer_update = 0;
-    drawInsertState();
+    drawInsertStates();
   } 
+}
+//-------------------------------------------//
+
+
+
+uint8_t checkNextSlot(uint8_t Channel, uint8_t Slot) {
+  if (Slot < 3) { // if not last slot
+    return SLOTactive[Channel][Slot+1]; // activation state of next slot
+  }
+  return 0;
 }
 
 
-void updateLEDs() {
-  if (update_led == 1) {
-    drawLEDs();
+uint8_t checkPreviousSlot(uint8_t Channel, uint8_t Slot) {
+  if (Slot > 0) { // if not first slot
+    return SLOTactive[Channel][Slot-1]; // activation state of previous slot
+  }
+  return 0;
+}
+
+
+void activateNextSlot(uint8_t Channel, uint8_t Slot) {
+  if (Slot < 3) {
+    SLOTactive[Channel][Slot+1] = 1;
+  }
+}
+
+void deactivateNextSlot(uint8_t Channel, uint8_t Slot) {
+  if (Slot < 3) {
+    SLOTactive[Channel][Slot+1] = 0;
   }
 }
 
 
-void SQselect(uint8_t Square, uint8_t active) {
-  SQselected = Square;
-  SelectActive = active;
+void clearOldInsert(uint8_t currentChannel, uint8_t currentSlot, uint8_t NewInsert) {
+  for (int channel=0; channel<8; channel++) {
+    for (int slot=0; slot<4;slot++) {
+      if (InsertStates[channel].Slots[slot].Insert == NewInsert) { // if insert used elsewhere
+        if (channel != currentChannel) {
+          InsertStates[channel].Slots[slot].Insert = 0; // 0=OFF
+          InsertStates[channel].Slots[slot].State = 0;  // 0=unused
+          deactivateNextSlot(channel,slot);
+        }
+      }
+    }
+  }
 }
 
 
-void setInsertState(uint8_t Square, uint8_t ch, uint8_t state) {
-  insert_states[Square][0] = ch + 0x41; // 0x41=A
-  insert_states[Square][1] = state; // GRAY/RED/GREEN
+void setNewInsertState(uint8_t Channel, uint8_t Slot, uint8_t Insert, uint8_t State) {
+  InsertStates[Channel].CH_enable = 1;                 // 0=ALL-INSERT-BYPASS, 1=IN
+  InsertStates[Channel].Slots[Slot].Insert = Insert;   // 0=OFF, 1=A, 2=B, 3=C, 4=D
+  
+  if (Insert == 0) {
+    InsertStates[Channel].Slots[Slot].State = 0;
+    deactivateNextSlot(Channel,Slot);
+  }
+  else {
+    InsertStates[Channel].Slots[Slot].State = State;     // 0=unused, 1=OUT, 2=IN
+    activateNextSlot(Channel, Slot);
+  }
 }
 
 
-void drawInsertState() {
+uint8_t getInsertChar(uint8_t Insert) {
+  if (Insert != 0x00) {
+    return 0x40 + Insert; // A/B/C/D
+  }
+  return 0x20; // space
+}
+
+
+void drawInsertStates() {
   uint16_t SQcolor;
-  for (int i=0; i<32; i++) {
-    switch (insert_states[i][1]) {
-    case 0: SQcolor = DARKGRAY; break; //inactive
-    case 1: SQcolor = RED; break; //OUT
-    case 2: SQcolor = GREEN; break; //IN
-    default: SQcolor = DARKGRAY; break;
-    }
+
+  for (int channel=0; channel<8; channel++) {   // Channel 0-7
+    for (int slot=0; slot<4; slot++) {           // Channel slot 0-3
+      switch (InsertStates[channel].Slots[slot].State) {
+        case 0: SQcolor = DARKGRAY; break; //inactive
+        case 1: SQcolor = RED; break;      //OUT
+        case 2: SQcolor = GREEN; break;    //IN
+        default: SQcolor = DARKGRAY; break;
+      }
     
-    if (SQselected == i) { // check if SQ is selected
-      if ((timer_flash == 1) && (SelectActive == 0)) { //if flash AND not selection active
-        fillRect(SQ[i][0],SQ[i][1],SQ[i][0]+12,SQ[i][1]+13,LIGHTBLUE);
-        drawChar(insert_states[i][0],SQ[i][0]+3,SQ[i][1]+4,TEXT_COLOR,LIGHTBLUE);
+      uint8_t InsertCHAR = getInsertChar(InsertStates[channel].Slots[slot].Insert);
+
+      if (channel == CHselected && slot == SLOTselected) { // check if this correspondant square on the display is selected
+        if ((timer_flash == 1) && (SelectActive == 0)) { //if flash AND not selection active
+          drawSquare(channel,slot,InsertCHAR,LIGHTBLUE);
+        }
+        else if (SelectActive == 1) { // if selection active = no flashing
+          drawSquare(channel,slot,InsertCHAR,BLUE);
+        }
+        else { //Flash-effect off
+          drawSquare(channel,slot,InsertCHAR,SQcolor);
+        }
       }
-      else if (SelectActive == 1) { // if selection active = no flashing
-        fillRect(SQ[i][0],SQ[i][1],SQ[i][0]+12,SQ[i][1]+13,BLUE);
-        drawChar(insert_states[i][0],SQ[i][0]+3,SQ[i][1]+4,TEXT_COLOR,BLUE);
+      else if (SLOTactive[channel][slot] == 0) { // SQ active
+        drawSquare(channel,slot,InsertCHAR,DARKERGRAY);
       }
-      else { //Flash-effect off
-        fillRect(SQ[i][0],SQ[i][1],SQ[i][0]+12,SQ[i][1]+13,SQcolor);
-        drawChar(insert_states[i][0],SQ[i][0]+3,SQ[i][1]+4,TEXT_COLOR,SQcolor);
+      else { // SQ not selected
+        drawSquare(channel,slot,InsertCHAR,SQcolor);
       }
-    }
-    else { // SQ not selected
-      fillRect(SQ[i][0],SQ[i][1],SQ[i][0]+12,SQ[i][1]+13,SQcolor);
-      drawChar(insert_states[i][0],SQ[i][0]+3,SQ[i][1]+4,TEXT_COLOR,SQcolor);
-    }
+
+    }  
+  }
+}
+
+
+
+
+/*
+-------------------------------------------
+                SIG LEDs
+-------------------------------------------*/
+void updateLEDs() {
+  if (update_led == 1) {
+    drawLEDs();
   }
 }
 
@@ -121,28 +253,38 @@ void drawLEDs() {
 }
 
 
+/*
+-------------------------------------------
+                RELAYs
+-------------------------------------------*/
+
+void setAllRelays() {
+  
+  for (int Channel=0; Channel<8; Channel++) { // CH1-8
+    for (int Slot=0; Slot<4; Slot++) { // Slot 1-4 per channel
+      if (InsertStates[Channel].Slots[Slot].Insert != 0) { // if an insert is assigned
+        uint8_t CIE = InsertStates[Channel].CH_enable;
+        channels[0] = (CIE<<Channel);
+        uint8_t Insert = InsertStates[Channel].Slots[Slot].Insert;
+        // Send
+        channels[Channel+1] = (1<<(Insert-1));
+        // Return
+        channels[Channel+1] |= (1<<((Insert-1)+4)); //setting same return as send as default
+      }
+    }
+  }
+  
+  //set_relays();
+}
+
+
+
 
 
 /*
 -------------------------------------------
             BUTTONS + ENCODER
 -------------------------------------------*/
-// void check_buttons() {
-//   if (update_buttons) {
-//     uint8_t new_buttons = read_buttons(); // 0bDCBA00E0
-    
-//     if (new_buttons != last_buttons) { // if new button push detected
-//       uint8_t new_state = (old_insert_state ^= new_buttons); // flip bit in old state - LATCHING
-//       selectState(new_state); //update selection state
-//       insertInOut(new_state); //update insert bypass state
-//       setButtonLEDs(new_state); //set button LEDs accordingly
-//       old_insert_state = new_state;
-//       last_buttons = new_buttons;
-//     }
-//   }
-// }
-
-
 void check_buttons() {
   if (update_buttons) {
     eventOccured = NILEVENT;
@@ -167,47 +309,41 @@ void check_buttons() {
     if (interrupt_0_flag) {
       eventOccured = EncP;
       stateEval((event)eventOccured); // Update current state based on what event occured
-      bob("SQselected: ", SQselected);
-      bob("InsSelected: ", InsSelected);
+      bob("CHselected: ", CHselected);
+      bob("SLOTselected: ", SLOTselected);
       interrupt_0_flag = 0;
     }
     if (interrupt_1_flag) {
       eventOccured = EncM;
       stateEval((event)eventOccured); // Update current state based on what event occured
-      bob("SQselected: ", SQselected);
-      bob("InsSelected: ", InsSelected);
+      bob("CHselected: ", CHselected);
+      bob("SLOTselected: ", SLOTselected);
       interrupt_1_flag = 0;
     }
-
     update_buttons = 0;
+  }
+}
+
+
+void changeInsertState(uint8_t Insert, uint8_t State) { // 1=OUT, 2=IN
+  for (int Channel=0; Channel<8; Channel++) {
+    for (int Slot=0; Slot<4; Slot++) {
+      if (InsertStates[Channel].Slots[Slot].Insert == Insert) { // find where that insert is inserted - change state
+        InsertStates[Channel].Slots[Slot].State = State;
+      }
+    }
   }
 }
 
 
 // Bypass buttons
 void insertInOut(uint8_t buttons) { // 0b0000DCBA 
-  for (int i=0; i<32; i++ ) {
-    if (insert_states[i][0] == 0x41) { // Insert A
-      insert_states[i][1] = ((buttons>>0) & 0x01)+1; // 1=OUT, 2=IN
-    }
-    if (insert_states[i][0] == 0x42) { // Insert B
-      insert_states[i][1] = ((buttons>>1) & 0x01)+1; // 1=OUT, 2=IN
-    }
-    if (insert_states[i][0] == 0x43) { // Insert C
-      insert_states[i][1] = ((buttons>>2) & 0x01)+1; // 1=OUT, 2=IN
-    }
-    if (insert_states[i][0] == 0x44) { // Insert D
-      insert_states[i][1] = ((buttons>>3) & 0x01)+1; // 1=OUT, 2=IN
-    }
-  }
+
+  changeInsertState(1,((buttons>>0) & 0x01)+1); // Insert A
+  changeInsertState(2,((buttons>>1) & 0x01)+1); // Insert B
+  changeInsertState(3,((buttons>>2) & 0x01)+1); // Insert C
+  changeInsertState(4,((buttons>>3) & 0x01)+1); // Insert D
 }
-
-
-// void selectState(uint8_t buttons) {  // 0bDCBA00E0
-//   uint8_t state = ((buttons>>1) & 0x01);  // 0b00000010
-//   SQselect(2,state);
-// }
-
 
 
 /*
@@ -218,32 +354,75 @@ STATE MACHINE ACTIONS
 void noaction() {
 }
 
-
 void incSQ() {
-  if (SQselected == 31) {
-    SQselected = 0;
+  uint8_t nextSlotActive = checkNextSlot(CHselected,SLOTselected);
+
+  if (CHselected == 7 && SLOTselected == 3) {
+    CHselected = 0;
+    SLOTselected = 0;
+  }
+  else if (SLOTselected == 3) {
+    CHselected++;
+    SLOTselected = 0;
+  }
+  else if (nextSlotActive) {
+    SLOTselected++;
+  }
+  else if (CHselected == 7){
+    CHselected = 0;
+    SLOTselected = 0;
   }
   else {
-    SQselected++;
+    CHselected++;
+    SLOTselected = 0;
   }
-  SQselect(SQselected,0);
 }
 
 
 void decSQ() {
-  if (SQselected == 0) {
-    SQselected = 31;
+  uint8_t previousSlotActive = checkPreviousSlot(CHselected,SLOTselected);
+
+  if (previousSlotActive) {
+    SLOTselected--;
   }
-  else {
-    SQselected--;
+
+  else if (CHselected > 0) {           // if not first channel
+    if (SLOTactive[CHselected-1][3]) { // and last slot of previous channel is active
+      CHselected--;
+      SLOTselected = 3;
+    }
+    else if (SLOTactive[CHselected-1][2]) {
+      CHselected--;
+      SLOTselected = 2;
+    }
+    else if (SLOTactive[CHselected-1][1]) {
+      CHselected--;
+      SLOTselected = 1;
+    }
+    else {
+      CHselected--;
+      SLOTselected = 0;
+    }
   }
-  SQselect(SQselected,0);
+  else { // channel == 0
+    CHselected = 7;
+    SLOTselected = 0;
+
+    if (SLOTactive[7][3]) {
+      SLOTselected = 3;
+    }
+    else if (SLOTactive[7][2]) {
+      SLOTselected = 2;
+    }
+    else if (SLOTactive[7][1]) {
+      SLOTselected = 1;
+    }
+  }
 }
 
 
 void selActive() {
-  // SelectActive = 1;
-  SQselect(SQselected,1);
+  SelectActive = 1;
 }
 
 
@@ -254,7 +433,7 @@ void incIns() {
   else {
     InsSelected++;
   }
-  setInsertState(SQselected,InsSelected,2);
+  setNewInsertState(CHselected,SLOTselected,InsSelected,2);
 }
 
 
@@ -265,15 +444,23 @@ void decIns() {
   else {
     InsSelected--;
   }
-  setInsertState(SQselected,InsSelected,2);
+  setNewInsertState(CHselected,SLOTselected,InsSelected,2);
 }
 
 
 void confirmIns() {
-  // SelectActive = 0;
-  SQselect(SQselected+1,0);
-}
+  SelectActive = 0;
+  
+  clearOldInsert(CHselected,SLOTselected,InsSelected);
 
+  incSQ(); // increment selection by 1
+
+
+  // print_InsertStates();
+
+  setAllRelays();
+  print_Channels();
+}
 
 
 
@@ -293,7 +480,7 @@ ISR(TIMER2_COMPA_vect) {
   }
 
   //Flashing cursor speed
-  if (flash_counter == 15) {
+  if (flash_counter == FLASH_RATE) {
     if (timer_flash == 0) {
       timer_flash = 1;
       PORTC |= (1<<PC2);
@@ -318,7 +505,7 @@ ISR(TIMER2_COMPA_vect) {
   }
 
   //LED refresh rate
-  if (led_counter == 20) {
+  if (led_counter == 80) {
     update_led = 1;
     led_counter = 0;
   }

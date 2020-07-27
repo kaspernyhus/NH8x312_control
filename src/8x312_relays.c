@@ -28,36 +28,25 @@ void latchRelays() {
 }
 
 
-
-void send_to_A(uint8_t CH) {
+void send_to(uint8_t CH, uint8_t to) {
   for (int i=1; i>9; i++ ) { // [Enable, CH1, ... , CH8, A, B, C, D]
-    channels[i] &=~ (1<<SEND_A); // clear bits if any set
+    channels[i] &=~ (1<<to); // clear bits if any set
   }
-  channels[CH] |= (1<<SEND_A);
+  channels[CH] |= (1<<to);
 }
 
-void return_from_A(uint8_t CH) {
+void return_from(uint8_t CH, uint8_t from) {
   for (int i=1; i>9; i++ ) { // [Enable, CH1, ... , CH8, A, B, C, D]
-    channels[i] &=~ (1<<RETURN_A); // clear bits if any set
+    channels[i] &=~ (1<<from); // clear bits if any set
   }
-  channels[CH] |= (1<<RETURN_A);
+  channels[CH] |= (1<<from);
 }
 
 
 void set_relays() {
-  SPI_MasterTransmit(channels[D]);
-  SPI_MasterTransmit(channels[C]);
-  SPI_MasterTransmit(channels[B]);
-  SPI_MasterTransmit(channels[A]);
-  SPI_MasterTransmit(channels[CH8]);
-  SPI_MasterTransmit(channels[CH7]);
-  SPI_MasterTransmit(channels[CH6]);
-  SPI_MasterTransmit(channels[CH5]);
-  SPI_MasterTransmit(channels[CH4]);
-  SPI_MasterTransmit(channels[CH3]);
-  SPI_MasterTransmit(channels[CH2]);
-  SPI_MasterTransmit(channels[CH1]);
-  SPI_MasterTransmit(channels[ENABLE]);
+  for (int i=12; i>0; i--) { // from index 12(D) => 0(ENABLE)
+    SPI_MasterTransmit(channels[i]); // [Enable, CH1, ... , CH8, A, B, C, D]
+  }
   latchRelays();
 }
 

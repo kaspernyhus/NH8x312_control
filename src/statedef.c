@@ -8,11 +8,6 @@ State Machine
 #include "statedef.h"
 
 
-uint8_t SQselected = 0;
-uint8_t SelectActive = 0;
-uint8_t InsSelected = 0;
-
-
 //initial state
 state currentState = state1;
 
