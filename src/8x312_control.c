@@ -186,7 +186,7 @@ void drawInsertStates() {
   uint16_t SQcolor;
 
   for (int channel=0; channel<8; channel++) {   // Channel 0-7
-    for (int slot=0; slot<4; slot++) {           // Channel slot 0-3
+    for (int slot=0; slot<4; slot++) {          // Channel slot 0-3
       switch (InsertStates[channel].Slots[slot].State) {
         case 0: SQcolor = DARKGRAY; break; //inactive
         case 1: SQcolor = RED; break;      //OUT
