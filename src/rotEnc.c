@@ -55,8 +55,9 @@ void RotaryAttachOnCCW( void (*functionPointer)() ) {
 
 void Init_RotEnc() {
   // Sets RotPins as input pull-up
-  DDRD &=~ (1<<RotPinA)|(1<<RotPinB);
-  PORTD |= (1<<RotPinA)|(1<<RotPinB);
+  DDRD &=~ (1<<RotPinA)|(1<<RotPinB)|(1<<RotButPin);
+  PORTD |= (1<<RotPinA)|(1<<RotPinB)|(1<<RotButPin);
+
 }
 
 
@@ -84,4 +85,8 @@ int8_t read_rotary() {
     }
   }
   return 0;
+}
+
+uint8_t read_encoder_button() {
+  return !(PIND & (1<<RotButPin));
 }

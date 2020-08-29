@@ -6,20 +6,15 @@ ARDUINO NANO
 
 ButtonPin => PD4
 
-74595 Button Scan
-CLK   =>  PB5
-DATA  =>  PB3
-LATCH =>  PD5
-
-74595 LED control
+74595 Button/LED control
 CLK   =>  PB5
 DATA  =>  PB3
 LATCH =>  PD6
+
 ---------------------------------
 */
 
-#define LATCH_BUT 5
-#define LATCH_LED 6
+#define LATCH_BUT_LED 6
 
 
 #include <avr/io.h>

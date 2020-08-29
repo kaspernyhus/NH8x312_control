@@ -31,6 +31,12 @@ TFT | Function  | AVR
 http://w8bh.net/avr/AvrTFT.pdf
 */
 
+
+#define TFT_DC  0 // PB0 [D8]
+#define TFT_RST 1 // PB1 [D9]
+#define TFT_CS  2 // PB2 [D10]
+
+
 /* 
 ---------------------------------
     ST7735 ROUTINES

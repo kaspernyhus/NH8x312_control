@@ -7,10 +7,6 @@ CONTROL Module for 8x312+4 project
 #include "8x312_control.h"
 
 
-uint8_t SQselected = 0;
-volatile uint8_t SelectActive = 0;
-volatile uint8_t InsSelected = 0;
-
 
 /*
 -------------------------------------------
@@ -48,6 +44,14 @@ void print_Channels() {
     UART0_puts("------------------\r\n");
   }
 }
+void stopWatch_Start(char string[]) {
+  UART0_puts(string);
+  StopWatch_timer = 0;
+}
+void stopWatch_End() {
+  uint16_t time = StopWatch_timer;
+  bob("StopWatch (ms): ", time);
+}
 //-------------------------------------------//
 
 
@@ -61,7 +65,7 @@ INITIALIZATION
 volatile struct channel InsertStates[8] = {0x00};
 
 
-void Init_SLOTactivation() { // Make first slot for each channel active
+void Init_SLOTactivation() { // Make first slot active for each channel 
   SLOTactive[8][4] = 0x00;
   for (int i=0; i<8; i++) {
     SLOTactive[i][0] = 1;
@@ -73,12 +77,14 @@ void Init_8x312() {
   UART0_Init(MYUBRR);
   UART0_puts("UART initialized\r\n");
 
-  timer2_Init(254); //tick @ 30Hz
+  timer2_Init(249); //tick @ 1ms
   
   Init_st7735_SPI();
   fillScreen(BG_COLOR);
   
-  Init_rotEnc();
+  Init_RotEnc();
+  RotaryAttachOnCW(EncoderCW);
+  RotaryAttachOnCCW(EncoderCCW);
 
   Init_buttons();
   last_buttons = 0x00;
@@ -88,6 +94,7 @@ void Init_8x312() {
   SelectActive = 0;
   CHselected = 0;
   SLOTselected = 0;
+  InsSelected = 0;
   
   Init_SLOTactivation();
 
@@ -102,13 +109,26 @@ DISPLAY UPDATES
 -------------------------------------------*/
 void updateBaseLayout() {
   drawBaseLayout();
+  drawInactiveSquares();
 }
 
 
 void updateScreen() {
-  if (timer_update == 1) {
-    timer_update = 0;
+  if (update_screen_timer == 1) {
+    update_screen_timer = 0;
+    //stopWatch_Start("----- Update Screen ------\r\n");
     drawInsertStates();
+    
+    
+    // Update inactive squares only every 1000ms
+    // if (update_basescreen_counter == 4) {
+    //   drawInactiveSquares();
+    //   update_basescreen_counter = 0;
+    // } 
+    // else {
+    //   update_basescreen_counter++;
+    // }
+    //stopWatch_End();
   } 
 }
 //-------------------------------------------//
@@ -135,12 +155,14 @@ void activateNextSlot(uint8_t Channel, uint8_t Slot) {
   if (Slot < 3) {
     SLOTactive[Channel][Slot+1] = 1;
   }
+  drawInactiveSquares();
 }
 
 void deactivateNextSlot(uint8_t Channel, uint8_t Slot) {
   if (Slot < 3) {
     SLOTactive[Channel][Slot+1] = 0;
   }
+  drawInactiveSquares();
 }
 
 
@@ -182,6 +204,18 @@ uint8_t getInsertChar(uint8_t Insert) {
 }
 
 
+void drawInactiveSquares() {
+  for (int channel=0; channel<8; channel++) {   // Channel 0-7
+    for (int slot=0; slot<4; slot++) {          // Channel slot 0-3
+      if (SLOTactive[channel][slot] == 0) { // SQ inactive
+        drawSquare(channel,slot,DARKERGRAY);
+      }
+    }
+  }  
+}
+
+
+
 void drawInsertStates() {
   uint16_t SQcolor;
 
@@ -198,20 +232,20 @@ void drawInsertStates() {
 
       if (channel == CHselected && slot == SLOTselected) { // check if this correspondant square on the display is selected
         if ((timer_flash == 1) && (SelectActive == 0)) { //if flash AND not selection active
-          drawSquare(channel,slot,InsertCHAR,LIGHTBLUE);
+          drawSquare_Char(channel,slot,InsertCHAR,LIGHTBLUE);
         }
         else if (SelectActive == 1) { // if selection active = no flashing
-          drawSquare(channel,slot,InsertCHAR,BLUE);
+          drawSquare_Char(channel,slot,InsertCHAR,BLUE);
         }
         else { //Flash-effect off
-          drawSquare(channel,slot,InsertCHAR,SQcolor);
+          drawSquare_Char(channel,slot,InsertCHAR,SQcolor);
         }
       }
-      else if (SLOTactive[channel][slot] == 0) { // SQ active
-        drawSquare(channel,slot,InsertCHAR,DARKERGRAY);
+      else if (SLOTactive[channel][slot] == 0) { // SQ inactive
+        //drawSquare_Char(channel,slot,InsertCHAR,DARKERGRAY); //Do nothing
       }
       else { // SQ not selected
-        drawSquare(channel,slot,InsertCHAR,SQcolor);
+        drawSquare_Char(channel,slot,InsertCHAR,SQcolor);
       }
 
     }  
@@ -285,40 +319,58 @@ void setAllRelays() {
 -------------------------------------------
             BUTTONS + ENCODER
 -------------------------------------------*/
+void resetFlash() {
+  timer_flash = 1;
+  flash_counter = 0;
+}
+
+void EncoderCW() {
+  resetFlash();
+  eventOccured = EncP;
+  stateEval((event)eventOccured); // Update current state based on what event occured
+  // bob("CHselected: ", CHselected);
+  // bob("SLOTselected: ", SLOTselected);
+}
+
+void EncoderCCW() {
+  resetFlash();
+  eventOccured = EncM;
+  stateEval((event)eventOccured); // Update current state based on what event occured
+  // bob("CHselected: ", CHselected);
+  // bob("SLOTselected: ", SLOTselected);
+}
+
+
 void check_buttons() {
   if (update_buttons) {
     eventOccured = NILEVENT;
-    uint8_t new_buttons = scanButtons(); // scan for button pushes
-    if (new_buttons != last_buttons) {   // if new push detected
-      uint8_t new_state = (old_insert_state ^= new_buttons); // flip bit in old state - LATCHING
+    // uint8_t new_buttons = scanButtons(); // scan for button pushes
+    // if (new_buttons != last_buttons) {   // if new push detected
+    //   uint8_t new_state = (old_insert_state ^= new_buttons); // flip bit in old state - LATCHING
       
-      if (new_buttons & (1<<0)) { // 0b000DCBAE
-        eventOccured = EncBut;
-        stateEval((event)eventOccured); // Update current state based on what event occured
-        bob("State: ", currentState);
-      }
+    //   // if (new_buttons & (1<<0)) { // 0b000DCBAE
+    //   //   eventOccured = EncBut;
+    //   //   stateEval((event)eventOccured); // Update current state based on what event occured
+    //   //   bob("State: ", currentState);
+    //   // }
     
-      insertInOut((new_state>>1)); // 0b0000DCBA
-      setButtonLEDs((new_state>>1));
+    //   // insertInOut((new_state>>1)); // 0b0000DCBA
+    //   // setButtonLEDs((new_state>>1));
 
-      old_insert_state = new_state;
-      last_buttons = new_buttons;
-    }
+    //   old_insert_state = new_state;
+    //   last_buttons = new_buttons;
+    // }
 
-    // ROTARY ENCODER INTERRUPT FLAGS
-    if (interrupt_0_flag) {
-      eventOccured = EncP;
-      stateEval((event)eventOccured); // Update current state based on what event occured
-      bob("CHselected: ", CHselected);
-      bob("SLOTselected: ", SLOTselected);
-      interrupt_0_flag = 0;
+    // ROTARY ENCODER
+    read_rotary();
+    
+    if (read_encoder_button() && lastEncBut == 0) {
+      lastEncBut = 1;
+      eventOccured = EncBut;
+      stateEval((event)eventOccured);
     }
-    if (interrupt_1_flag) {
-      eventOccured = EncM;
-      stateEval((event)eventOccured); // Update current state based on what event occured
-      bob("CHselected: ", CHselected);
-      bob("SLOTselected: ", SLOTselected);
-      interrupt_1_flag = 0;
+    else if (read_encoder_button() == 0) {
+      lastEncBut = 0;
     }
     update_buttons = 0;
   }
@@ -338,7 +390,6 @@ void changeInsertState(uint8_t Insert, uint8_t State) { // 1=OUT, 2=IN
 
 // Bypass buttons
 void insertInOut(uint8_t buttons) { // 0b0000DCBA 
-
   changeInsertState(1,((buttons>>0) & 0x01)+1); // Insert A
   changeInsertState(2,((buttons>>1) & 0x01)+1); // Insert B
   changeInsertState(3,((buttons>>2) & 0x01)+1); // Insert C
@@ -458,8 +509,8 @@ void confirmIns() {
 
   // print_InsertStates();
 
-  setAllRelays();
-  print_Channels();
+  //setAllRelays();
+  //print_Channels();
 }
 
 
@@ -470,24 +521,25 @@ TIMER SERVICE ROUTINE
 -------------------------------------------*/
 
 ISR(TIMER2_COMPA_vect) {
+  // StopWatch
+  StopWatch_timer++;
+
   //Screen refresh rate
-  if (update_counter == 5) {
-    timer_update = 1;
-    update_counter = 0;
+  if (update_screen_counter == SCREEN_REFRESH_RATE-1) {
+    update_screen_timer = 1;
+    update_screen_counter = 0;
   }
   else {
-    update_counter++;
+    update_screen_counter++;
   }
 
   //Flashing cursor speed
-  if (flash_counter == FLASH_RATE) {
+  if (flash_counter == FLASH_RATE-1) {
     if (timer_flash == 0) {
       timer_flash = 1;
-      PORTC |= (1<<PC2);
     }
     else {
       timer_flash = 0;
-      PORTC &=~ (1<<PC2);
     }
     flash_counter = 0;
   }
@@ -496,16 +548,11 @@ ISR(TIMER2_COMPA_vect) {
   }
 
   //Button update
-  if (buttons_counter == 10) {
-    update_buttons = 1;
-    buttons_counter = 0;
-  }
-  else {
-    buttons_counter++;
-  }
+  update_buttons = 1;
+
 
   //LED refresh rate
-  if (led_counter == 80) {
+  if (led_counter == SCREEN_REFRESH_RATE-1) {
     update_led = 1;
     led_counter = 0;
   }

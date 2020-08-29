@@ -1,10 +1,10 @@
 /*
- -----------------
+ -----------------------------
  Configuration header file
- -----------------
+ -----------------------------
  
- NH312+4 Control
- ST7735 Display
+      NH312+4 Control
+      ST7735 Display
 
 -----------------------------
 Arduino Nano 
@@ -16,11 +16,10 @@ PB5 => CLOCK
 PB3 => DATA
 
 PB2 => CS (TFT)
-PB1 => D/C (TFT)
-PB0 => TFT RESET
+PB0 => D/C (TFT)
+PB1 => TFT RESET
 
-PD5 => BUTTON LATCH
-PD6 => LED LATCH
+PD6 => BUTTON/LED LATCH
 PD7 => RELAYs LATCH
 -----------------------------
 BUTTONS
@@ -28,6 +27,7 @@ BUTTONS
 PD4 => ButtonScanPin
 PD2 => EncA
 PD3 => EncB
+PD5 => EncBut
 -----------------------------
 ADC
 -----------------------------
@@ -57,7 +57,8 @@ PC6 (RESET)
 
 #define BG_COLOR 0x396F
 #define TEXT_COLOR 0xFFFF
-#define FLASH_RATE 50 
+#define FLASH_RATE 1000 //ms
+#define SCREEN_REFRESH_RATE 250 //ms
 
 
 

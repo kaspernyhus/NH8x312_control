@@ -146,7 +146,11 @@ uint8_t SQlayout[8][4][2] = {
 -------------------------------------------
 Insert Squares
 -------------------------------------------*/
-void drawSquare(uint8_t channel, uint8_t slot, uint8_t InsertCHAR, uint16_t color) {
+void drawSquare_Char(uint8_t channel, uint8_t slot, uint8_t InsertCHAR, uint16_t color) {
   fillRect(SQlayout[channel][slot][0],SQlayout[channel][slot][1],SQlayout[channel][slot][0]+12,SQlayout[channel][slot][1]+13,color);
   drawChar(InsertCHAR,SQlayout[channel][slot][0]+3,SQlayout[channel][slot][1]+4,TEXT_COLOR,color);
+}
+
+void drawSquare(uint8_t channel, uint8_t slot, uint16_t color) {
+  fillRect(SQlayout[channel][slot][0],SQlayout[channel][slot][1],SQlayout[channel][slot][0]+12,SQlayout[channel][slot][1]+13,color);
 }

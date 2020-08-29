@@ -6,15 +6,11 @@ ARDUINO NANO
 
 ButtonPin => PD4
 
-74595 Button Scan
-CLK   =>  PB5
-DATA  =>  PB3
-LATCH =>  PD5
-
-74595 LED control
+74595 Button/LED control
 CLK   =>  PB5
 DATA  =>  PB3
 LATCH =>  PD6
+
 ---------------------------------
 */
 
@@ -23,9 +19,9 @@ LATCH =>  PD6
 void Init_buttons() {
   DDRD &=~ (1<<4); // PD4 high Z input
   PORTD &=~ (1<<4);
-  // LATCH PINs
-  DDRD |= (1<<LATCH_BUT)|(1<<LATCH_LED);   // set LATCH as OUTPUT
-  PORTD &=~ (1<<LATCH_BUT)|(1<<LATCH_LED); // set LATCH pins LOW
+  // LATCH PIN
+  DDRD |= (1<<LATCH_BUT_LED);   // set LATCH as OUTPUT
+  PORTD &=~ (1<<LATCH_BUT_LED); // set LATCH pin LOW
 }
 
 
@@ -45,18 +41,18 @@ void shiftOut(uint8_t latchPin, uint8_t data) {
 
 uint8_t scanButtons() {
   uint8_t buttons = 0x00;
-  for (int i=0; i<5; i++) {
+  for (int i=0; i<4; i++) {
     uint8_t test = 0x01;
-    shiftOut(LATCH_BUT,(test<<i));
+    shiftOut(LATCH_BUT_LED,(test<<i));
     if (readButtonPin() == 0x01) {
       buttons |= (1<<i);
     }
     //_delay_ms(100);
   }
-  return buttons; // 0b000DCBAE
+  return buttons; // 0b0000DCBA
 }
 
 
 void setButtonLEDs(uint8_t data) {
-  shiftOut(LATCH_LED,data);
+  shiftOut(LATCH_BUT_LED,(data<<4));
 }

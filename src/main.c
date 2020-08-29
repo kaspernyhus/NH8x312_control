@@ -33,7 +33,7 @@ int main() {
 
   while(1) {
     updateScreen();
-    //check_buttons();
-    updateLEDs();
+    check_buttons();
+    //updateLEDs();
   }
 }

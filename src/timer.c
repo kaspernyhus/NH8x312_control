@@ -22,10 +22,10 @@ void timer2_Init(unsigned int compareValue) {
   // TCCR2B |= (1<<CS20);                         // no prescaling
   // TCCR2B |= (1<<CS21);                         // clk/8
   // TCCR2B |= (1<<CS21) | (1<<CS20);             // clk/32
-  // TCCR2B |= (1<<CS22);                         // clk/64
+  TCCR2B |= (1<<CS22);                         // clk/64
   // TCCR2B |= (1<<CS22) | (1<<CS20);             // clk/128
   // TCCR2B |= (1<<CS22) | (1<<CS21);             // clk/256
-  TCCR2B |= (1<<CS22) | (1<<CS21) | (1<<CS20);  // clk/1024
+  // TCCR2B |= (1<<CS22) | (1<<CS21) | (1<<CS20);  // clk/1024
 
 
   TCCR2A |= (1<<WGM21); // CTC mode, TOP value = OCR2A

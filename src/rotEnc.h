@@ -38,7 +38,8 @@ rot_enc_table[]= {0,1,-1,0,-1,0,0,1,1,0,0,-1,0,-1,1,0};
 
 
 #define RotPinA 2 // PD2
-#define RotPinB 4 // PD4
+#define RotPinB 3 // PD4
+#define RotButPin 5 // PD5
 
 
 #include <avr/io.h>
@@ -54,3 +55,4 @@ void Init_RotEnc();
 void RotaryAttachOnCW( void (*functionPointer)() );
 void RotaryAttachOnCCW( void (*functionPointer)() );
 int8_t read_rotary();
+uint8_t read_encoder_button();

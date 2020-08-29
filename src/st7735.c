@@ -33,11 +33,6 @@ http://w8bh.net/avr/AvrTFT.pdf
 
 #include "st7735.h"
 
-
-#define TFT_DC  0 // PB0 [D8]
-#define TFT_RST 1 // PB1 [D9]
-#define TFT_CS  2 // PB2 [D10]
-
 #define ClearBit(x,y) x &= ~_BV(y) // equivalent to cbi(x,y)
 #define SetBit(x,y) x |= _BV(y) // equivalent to sbi(x,y)
 
@@ -65,14 +60,14 @@ void writeCommand(uint8_t cmd) {
 
 
 void setColor(uint16_t color, unsigned int pixels) {   
-  startWriteST7735();
+  //startWriteST7735();
   for (; pixels>0; pixels--) {
     SPDR = (color >> 8);        // hi byte
     while(!(SPSR & (1<<SPIF))); // Wait for transmission complete
     SPDR = (color & 0xFF);      // lo byte
     while(!(SPSR & (1<<SPIF))); // Wait for transmission complete
   }
-  endWriteST7735();
+  //endWriteST7735();
 }
 
 
@@ -154,9 +149,9 @@ void fillScreen(uint16_t color) {
 
 // fill a rectangle
 void fillRect(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint16_t color) {
-  startWriteST7735();
   uint8_t width = x1-x0+1;  // rectangle width
   uint8_t height = y1-y0+1; // rectangle height
+  startWriteST7735();
   setAddrWindow(x0,y0,x1,y1);
   setColor(color,width*height);
   endWriteST7735();
@@ -201,11 +196,12 @@ void drawRect(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint16_t color) {
 ------------------------------------- */
 
 void drawChar(uint8_t ch, uint8_t x, uint8_t y, uint16_t color, uint16_t bg_color) { // ASCII ch
-  startWriteST7735();
+  
 
   uint16_t pixel;
   uint8_t row, bit, ch_data, mask = 0x80;
-
+  
+  startWriteST7735();
   setAddrWindow(x,y,x+6,y+6);
 
   for (row=0; row<7; row++) {
