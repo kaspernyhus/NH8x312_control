@@ -27,5 +27,5 @@ LATCH =>  PD6
 
 void Init_buttons();
 uint8_t readButtonPin();
-uint8_t scanButtons();
+uint8_t scanButtons(uint8_t activeLEDs);
 void setButtonLEDs(uint8_t buttons);

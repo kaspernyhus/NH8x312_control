@@ -35,21 +35,21 @@ void shiftOut(uint8_t latchPin, uint8_t data) {
   SPI_MasterTransmit(data);
   PORTD |= (1<<latchPin);
   _delay_us(1);
-  PORTD &=~(1<<latchPin);
+  PORTD &=~ (1<<latchPin);
 }
 
 
-uint8_t scanButtons() {
+uint8_t scanButtons(uint8_t activeLEDs) { 
   uint8_t buttons = 0x00;
+  uint8_t _activeLEDs = (activeLEDs<<4);   // 0bLEDSxxxx
   for (int i=0; i<4; i++) {
-    uint8_t test = 0x01;
-    shiftOut(LATCH_BUT_LED,(test<<i));
+    uint8_t test_mask = _activeLEDs|(0x01<<i);   // 0bLEDS0001
+    shiftOut(LATCH_BUT_LED,test_mask);
     if (readButtonPin() == 0x01) {
       buttons |= (1<<i);
     }
-    //_delay_ms(100);
   }
-  return buttons; // 0b0000DCBA
+  return buttons; // 0bxxxxDCBA
 }
 
 

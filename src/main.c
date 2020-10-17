@@ -2,8 +2,8 @@
  -----------------
  ARDUINO NANO
  -----------------
- 
- DISPLAY TEST
+
+ 8x312+4 project main.c
 
 */
 
@@ -15,18 +15,9 @@
 #include "8x312_control.h"
 
 
-void init() {
+int main() {
   Init_8x312();
   sei();
-}
-
-
-int main() {
-  init();
-
-  setLED(0,1);
-  setLED(1,2);
-  setLED(2,3);
 
   updateBaseLayout();
 
@@ -34,6 +25,7 @@ int main() {
   while(1) {
     updateScreen();
     check_buttons();
+    check_rotary();
     //updateLEDs();
   }
 }

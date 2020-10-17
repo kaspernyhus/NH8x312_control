@@ -38,13 +38,15 @@ rot_enc_table[]= {0,1,-1,0,-1,0,0,1,1,0,0,-1,0,-1,1,0};
 
 
 #define RotPinA 2 // PD2
-#define RotPinB 3 // PD4
+#define RotPinB 3 // PD3
 #define RotButPin 5 // PD5
 
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include "external_interrupts.h"
+#include "UART.h"
 
 
 void (*onCWmove)(void);
@@ -54,5 +56,7 @@ void (*onCCWmove)(void);
 void Init_RotEnc();
 void RotaryAttachOnCW( void (*functionPointer)() );
 void RotaryAttachOnCCW( void (*functionPointer)() );
-int8_t read_rotary();
-uint8_t read_encoder_button();
+//int8_t read_rotary();
+void check_rotary();
+uint8_t scan_encoder_button();
+void show_enc_values();

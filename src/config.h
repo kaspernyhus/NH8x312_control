@@ -54,11 +54,15 @@ PC6 (RESET)
 
 #include <avr/io.h>
 
+#define BAUD 9600
+#define MYUBRR F_CPU/8/BAUD-1 //full dublex
+
 
 #define BG_COLOR 0x396F
 #define TEXT_COLOR 0xFFFF
 #define FLASH_RATE 1000 //ms
 #define SCREEN_REFRESH_RATE 250 //ms
+#define BUTTON_SCAN_RATE 50 //ms
 
 
 
@@ -83,9 +87,4 @@ PC6 (RESET)
 #define DARKERGRAY 0x8C71
 #define DARKGRAY 0xA514
 #define LIGHTGRAY 0xBDD8
-
-
-// ----------------- //
-//    STATE MACHINE
-// ----------------- //
 

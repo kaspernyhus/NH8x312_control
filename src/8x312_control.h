@@ -17,10 +17,6 @@ CONTROL Module for 8x312+4 project
 #include "RotEnc.h"
 
 
-#define BAUD 9600
-#define MYUBRR F_CPU/8/BAUD-1 //full dublex
-
-
 void Init_8x312();
 
 void updateBaseLayout();
@@ -47,9 +43,6 @@ void selectState(uint8_t buttons);
 
 //LAYOUT COORDINATES
 extern uint8_t SQ[32][2]; // (x,y) for the 32 insert squares
-
-
-
 extern uint8_t SQlayout[8][4][2];
 
 
@@ -98,8 +91,10 @@ volatile uint16_t update_screen_counter;
 volatile uint8_t update_screen_timer;
 volatile uint16_t update_basescreen_counter;
 volatile uint8_t update_basescreen_timer;
-volatile uint16_t buttons_counter;
+volatile uint16_t button_scan_counter;
 volatile uint8_t update_buttons;
 volatile uint16_t led_counter;
 volatile uint8_t update_led;
 volatile uint16_t StopWatch_timer;
+
+

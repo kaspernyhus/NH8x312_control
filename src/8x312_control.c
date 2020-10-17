@@ -97,8 +97,6 @@ void Init_8x312() {
   InsSelected = 0;
   
   Init_SLOTactivation();
-
-  // DDRC |= (1<<PC2); //test LED
 }
 
 
@@ -314,7 +312,6 @@ void setAllRelays() {
 
 
 
-
 /*
 -------------------------------------------
             BUTTONS + ENCODER
@@ -343,34 +340,27 @@ void EncoderCCW() {
 
 void check_buttons() {
   if (update_buttons) {
-    eventOccured = NILEVENT;
-    // uint8_t new_buttons = scanButtons(); // scan for button pushes
-    // if (new_buttons != last_buttons) {   // if new push detected
-    //   uint8_t new_state = (old_insert_state ^= new_buttons); // flip bit in old state - LATCHING
+    uint8_t new_buttons = scanButtons(old_insert_state); // scan for new button pushes
+    if (new_buttons != last_buttons) {   // if new push detected
+      uint8_t new_state = (old_insert_state ^= new_buttons); // flip bit in old state - LATCHING
       
-    //   // if (new_buttons & (1<<0)) { // 0b000DCBAE
-    //   //   eventOccured = EncBut;
-    //   //   stateEval((event)eventOccured); // Update current state based on what event occured
-    //   //   bob("State: ", currentState);
-    //   // }
-    
-    //   // insertInOut((new_state>>1)); // 0b0000DCBA
-    //   // setButtonLEDs((new_state>>1));
+      // insertInOut((new_state));
+      setButtonLEDs((new_state)); // 0b0000DCBA
 
-    //   old_insert_state = new_state;
-    //   last_buttons = new_buttons;
-    // }
-
-    // ROTARY ENCODER
-    read_rotary();
-    
-    if (read_encoder_button() && lastEncBut == 0) {
-      lastEncBut = 1;
-      eventOccured = EncBut;
-      stateEval((event)eventOccured);
+      old_insert_state = new_state;
+      last_buttons = new_buttons;
     }
-    else if (read_encoder_button() == 0) {
-      lastEncBut = 0;
+
+    uint8_t new_enc_but = scan_encoder_button();
+    if (new_enc_but != lastEncBut) {
+      if (new_enc_but == 0x01) {
+        eventOccured = EncBut;
+        stateEval((event)eventOccured);
+        lastEncBut = 0x01;
+      }
+      else {
+        lastEncBut = 0x00;
+      }
     }
     update_buttons = 0;
   }
@@ -548,8 +538,13 @@ ISR(TIMER2_COMPA_vect) {
   }
 
   //Button update
-  update_buttons = 1;
-
+  if (button_scan_counter == BUTTON_SCAN_RATE-1) {
+    update_buttons = 1;
+    button_scan_counter = 0;
+  }
+  else {
+    button_scan_counter++;
+  }
 
   //LED refresh rate
   if (led_counter == SCREEN_REFRESH_RATE-1) {
@@ -560,3 +555,7 @@ ISR(TIMER2_COMPA_vect) {
     led_counter++;
   }
 }
+
+
+
+
