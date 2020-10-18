@@ -66,9 +66,22 @@ volatile struct channel InsertStates[8] = {0x00};
 
 
 void Init_SLOTactivation() { // Make first slot active for each channel 
-  SLOTactive[8][4] = 0x00;
   for (int i=0; i<8; i++) {
     SLOTactive[i][0] = 1;
+    for (int j=1; j<4; j++) {
+      SLOTactive[i][j] = 0;
+    }
+  }
+}
+
+
+void Reset_InsertStates() {
+  for (int i=0; i<8; i++) {
+    InsertStates[i].CH_enable = 0;
+    for (int j=0; j<4; j++) {
+      InsertStates[i].Slots[j].Insert = 0;
+      InsertStates[i].Slots[j].State = 0;
+    }
   }
 }
 
@@ -87,7 +100,9 @@ void Init_8x312() {
   RotaryAttachOnCCW(EncoderCCW);
 
   Init_buttons();
+  setButtonLEDs(0x00);
   last_buttons = 0x00;
+  encButLongPress = 0;
 
   //Init_relays();
 
@@ -184,11 +199,11 @@ void setNewInsertState(uint8_t Channel, uint8_t Slot, uint8_t Insert, uint8_t St
   InsertStates[Channel].Slots[Slot].Insert = Insert;   // 0=OFF, 1=A, 2=B, 3=C, 4=D
   
   if (Insert == 0) {
-    InsertStates[Channel].Slots[Slot].State = 0;
+    InsertStates[Channel].Slots[Slot].State = 0;       // 0=unused, 1=OUT, 2=IN
     deactivateNextSlot(Channel,Slot);
   }
   else {
-    InsertStates[Channel].Slots[Slot].State = State;     // 0=unused, 1=OUT, 2=IN
+    InsertStates[Channel].Slots[Slot].State = State;   // 0=unused, 1=OUT, 2=IN
     activateNextSlot(Channel, Slot);
   }
 }
@@ -211,7 +226,6 @@ void drawInactiveSquares() {
     }
   }  
 }
-
 
 
 void drawInsertStates() {
@@ -291,7 +305,6 @@ void drawLEDs() {
 -------------------------------------------*/
 
 void setAllRelays() {
-  
   for (int Channel=0; Channel<8; Channel++) { // CH1-8
     for (int Slot=0; Slot<4; Slot++) { // Slot 1-4 per channel
       if (InsertStates[Channel].Slots[Slot].Insert != 0) { // if an insert is assigned
@@ -305,7 +318,6 @@ void setAllRelays() {
       }
     }
   }
-  
   //set_relays();
 }
 
@@ -337,26 +349,29 @@ void EncoderCCW() {
   // bob("SLOTselected: ", SLOTselected);
 }
 
-
 void check_buttons() {
   if (update_buttons) {
-    uint8_t new_buttons = scanButtons(old_insert_state); // scan for new button pushes
+    //--------------------//
+    //   Bypass buttons   //
+    //--------------------//
+    uint8_t current_LED_states = get_current_button_LED_stated();
+    uint8_t new_buttons = scanButtons(current_LED_states); // scan for new button pushes
     if (new_buttons != last_buttons) {   // if new push detected
-      uint8_t new_state = (old_insert_state ^= new_buttons); // flip bit in old state - LATCHING
-      
-      // insertInOut((new_state));
-      setButtonLEDs((new_state)); // 0b0000DCBA
-
-      old_insert_state = new_state;
+      uint8_t new_state = (current_LED_states ^= new_buttons); // flip bit in old state - LATCHING
+      insertInOut((new_state));
       last_buttons = new_buttons;
     }
 
-    uint8_t new_enc_but = scan_encoder_button();
-    if (new_enc_but != lastEncBut) {
-      if (new_enc_but == 0x01) {
+    //--------------------//
+    //   Encoder button   //
+    //--------------------//
+    uint8_t newEncBut = read_enc_button();
+    if (newEncBut != lastEncBut) {
+      if (newEncBut == 0x01) {
         eventOccured = EncBut;
         stateEval((event)eventOccured);
         lastEncBut = 0x01;
+        encButLongPress = 1;
       }
       else {
         lastEncBut = 0x00;
@@ -365,7 +380,6 @@ void check_buttons() {
     update_buttons = 0;
   }
 }
-
 
 void changeInsertState(uint8_t Insert, uint8_t State) { // 1=OUT, 2=IN
   for (int Channel=0; Channel<8; Channel++) {
@@ -384,6 +398,32 @@ void insertInOut(uint8_t buttons) { // 0b0000DCBA
   changeInsertState(2,((buttons>>1) & 0x01)+1); // Insert B
   changeInsertState(3,((buttons>>2) & 0x01)+1); // Insert C
   changeInsertState(4,((buttons>>3) & 0x01)+1); // Insert D
+}
+
+uint8_t get_current_button_LED_stated() {
+  uint8_t state = 0;
+  uint8_t states = 0;
+  for (int channel=0; channel<8; channel++) {
+    for (int slot=0; slot<4;slot++) {
+      if (InsertStates[channel].Slots[slot].Insert == 0x01) {      // if insert = A
+          state = InsertStates[channel].Slots[slot].State>>1;      // active insert = 0b00000010
+          states |= state<<0; 
+      }
+      else if (InsertStates[channel].Slots[slot].Insert == 0x02) { // if insert = B
+          state = InsertStates[channel].Slots[slot].State>>1;      // active insert = 0b00000010
+          states |= state<<1; 
+      }
+      else if (InsertStates[channel].Slots[slot].Insert == 0x03) { // if insert = C
+          state = InsertStates[channel].Slots[slot].State>>1;      // active insert = 0b00000010
+          states |= state<<2; 
+      }
+      else if (InsertStates[channel].Slots[slot].Insert == 0x04) { // if insert = D
+          state = InsertStates[channel].Slots[slot].State>>1;      // active insert = 0b00000010
+          states |= state<<3; 
+      }
+    }
+  }
+  return states;
 }
 
 
@@ -464,6 +504,7 @@ void decSQ() {
 
 void selActive() {
   SelectActive = 1;
+  encButLongPress = 0;
 }
 
 
@@ -495,12 +536,26 @@ void confirmIns() {
   clearOldInsert(CHselected,SLOTselected,InsSelected);
 
   incSQ(); // increment selection by 1
-
+  encButLongPress = 0;
 
   // print_InsertStates();
 
   //setAllRelays();
   //print_Channels();
+}
+
+
+void resetInserts() {
+  Init_SLOTactivation();
+  Reset_InsertStates();
+
+  SelectActive = 0;
+  CHselected = 0;
+  SLOTselected = 0;
+  InsSelected = 0;
+
+  drawInsertStates();
+  drawInactiveSquares();
 }
 
 
@@ -514,7 +569,7 @@ ISR(TIMER2_COMPA_vect) {
   // StopWatch
   StopWatch_timer++;
 
-  //Screen refresh rate
+  // Screen refresh rate
   if (update_screen_counter == SCREEN_REFRESH_RATE-1) {
     update_screen_timer = 1;
     update_screen_counter = 0;
@@ -523,7 +578,7 @@ ISR(TIMER2_COMPA_vect) {
     update_screen_counter++;
   }
 
-  //Flashing cursor speed
+  // Flashing cursor speed
   if (flash_counter == FLASH_RATE-1) {
     if (timer_flash == 0) {
       timer_flash = 1;
@@ -537,7 +592,7 @@ ISR(TIMER2_COMPA_vect) {
     flash_counter++;
   }
 
-  //Button update
+  // Button update
   if (button_scan_counter == BUTTON_SCAN_RATE-1) {
     update_buttons = 1;
     button_scan_counter = 0;
@@ -546,7 +601,25 @@ ISR(TIMER2_COMPA_vect) {
     button_scan_counter++;
   }
 
-  //LED refresh rate
+  // Encoder button long press
+  if (encButLongPress > 0) {
+    if (encButLongPress == ENC_BUT_LONG_PRESS-1) {
+      if (read_enc_button()) { // if button still pressed after a while
+        eventOccured = EncButLong;
+        stateEval((event)eventOccured);
+        encButLongPress = 0;
+      }
+      else {
+        encButLongPress = 0; // if not pressed reset counter
+      }
+    }
+    else {
+      encButLongPress++;
+    }
+  }
+
+
+  // LED refresh rate
   if (led_counter == SCREEN_REFRESH_RATE-1) {
     update_led = 1;
     led_counter = 0;

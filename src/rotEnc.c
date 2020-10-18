@@ -91,7 +91,7 @@ void Init_RotEnc() {
 // }
 
 
-scan_rotary_encoder() {
+void scan_rotary() {
   // Previous State - Next State
   PSNS <<= 2; // shift previous state bits = ABXX
   if ( !!(PIND & (1<<RotPinA)) ) PSNS |= 0x02; // read pinA; if A=1, set bit 1
@@ -111,7 +111,7 @@ scan_rotary_encoder() {
 }
 
 
-uint8_t scan_encoder_button() {
+uint8_t read_enc_button() {
   return !(PIND & (1<<RotButPin));
 }
 
@@ -130,13 +130,13 @@ void check_rotary() {
 
 ISR(INT0_vect) {
   cli();
-  scan_rotary_encoder();
+  scan_rotary();
   sei();
 }
 
 
 ISR(INT1_vect) {
   cli();
-  scan_rotary_encoder();
+  scan_rotary();
   sei();
 }

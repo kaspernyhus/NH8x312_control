@@ -41,7 +41,7 @@ void shiftOut(uint8_t latchPin, uint8_t data) {
 
 uint8_t scanButtons(uint8_t activeLEDs) { 
   uint8_t buttons = 0x00;
-  uint8_t _activeLEDs = (activeLEDs<<4);   // 0bLEDSxxxx
+  uint8_t _activeLEDs = (~activeLEDs<<4);   // 0bLEDSxxxx
   for (int i=0; i<4; i++) {
     uint8_t test_mask = _activeLEDs|(0x01<<i);   // 0bLEDS0001
     shiftOut(LATCH_BUT_LED,test_mask);
@@ -54,5 +54,7 @@ uint8_t scanButtons(uint8_t activeLEDs) {
 
 
 void setButtonLEDs(uint8_t data) {
-  shiftOut(LATCH_BUT_LED,(data<<4));
+  uint8_t not_data =~ data;
+  not_data <<= 4;
+  shiftOut(LATCH_BUT_LED,not_data);
 }

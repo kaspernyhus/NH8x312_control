@@ -58,5 +58,5 @@ void RotaryAttachOnCW( void (*functionPointer)() );
 void RotaryAttachOnCCW( void (*functionPointer)() );
 //int8_t read_rotary();
 void check_rotary();
-uint8_t scan_encoder_button();
-void show_enc_values();
+uint8_t read_enc_button();
+void scan_rotary();

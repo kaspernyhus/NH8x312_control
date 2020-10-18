@@ -26,6 +26,7 @@ void updateLEDs();
 void SQselect(uint8_t Square, uint8_t active);
 
 void setInsertState(uint8_t Square, uint8_t ch, uint8_t state);
+uint8_t get_current_button_LED_stated();
 
 void drawInsertState();
 void drawInactiveSquares();
@@ -51,8 +52,8 @@ extern uint8_t SQlayout[8][4][2];
 //---------------------------------------------------//
 struct Slot
 {
-  uint8_t Insert;
-  uint8_t State;
+  uint8_t Insert; // 0/A/B/C/D
+  uint8_t State;  // Bypass/In
 };
 
 struct channel
@@ -83,7 +84,7 @@ volatile uint8_t lastEncBut;
 volatile uint8_t old_insert_state;
 
 
-//Timer
+//Timers
 volatile uint8_t tick;
 volatile uint16_t flash_counter;
 volatile uint8_t timer_flash;
@@ -93,6 +94,7 @@ volatile uint16_t update_basescreen_counter;
 volatile uint8_t update_basescreen_timer;
 volatile uint16_t button_scan_counter;
 volatile uint8_t update_buttons;
+volatile uint16_t encButLongPress;
 volatile uint16_t led_counter;
 volatile uint8_t update_led;
 volatile uint16_t StopWatch_timer;

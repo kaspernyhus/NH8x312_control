@@ -23,6 +23,7 @@ LATCH =>  PD6
 #include <util/delay.h>
 #include "SPI.h"
 #include "config.h"
+#include "UART.h"
 
 
 void Init_buttons();

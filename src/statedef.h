@@ -13,8 +13,8 @@ State Machine
 
 // States
 typedef enum {
-  state1,
-  state2
+  scrollState,
+  insState
 } state;
 
 // Events
@@ -22,7 +22,8 @@ typedef enum {
   NILEVENT,
   EncP,
   EncM,
-  EncBut
+  EncBut,
+  EncButLong
 } event;
 
 
@@ -45,6 +46,7 @@ void selActive();
 void incIns();
 void decIns();
 void confirmIns();
+void resetInserts();
 
 
 //function which test on the event at shift states
@@ -52,6 +54,6 @@ void stateEval(event e);
 event	eventOccured;
 
 
-stateElement stateMatrix[2][4];
+stateElement stateMatrix[2][5];
 
 extern state currentState;

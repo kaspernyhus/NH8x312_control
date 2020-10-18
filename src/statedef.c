@@ -9,14 +9,14 @@ State Machine
 
 
 //initial state
-state currentState = state1;
+state currentState = scrollState;
 
 
 // State Matrix
-//    CurrentState         EncP              EncM              EncBut    
-stateElement stateMatrix[2][4] = {
-  {   {state1,noaction},   {state1,incSQ},   {state1,decSQ},   {state2,selActive}   },
-  {   {state2,noaction},   {state2,incIns},  {state2,decIns},  {state1,confirmIns}  }
+//    CurrentState              EncP                   EncM                   EncBut                      EncButLongPress               //
+stateElement stateMatrix[2][5] = {
+  {   {scrollState,noaction},   {scrollState,incSQ},   {scrollState,decSQ},   {insState,selActive},       {scrollState,resetInserts}    },
+  {   {insState,noaction},      {insState,incIns},     {insState,decIns},     {scrollState,confirmIns},   {scrollState,resetInserts}    }
 };
 
 

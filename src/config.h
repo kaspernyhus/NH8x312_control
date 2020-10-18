@@ -61,8 +61,9 @@ PC6 (RESET)
 #define BG_COLOR 0x396F
 #define TEXT_COLOR 0xFFFF
 #define FLASH_RATE 1000 //ms
-#define SCREEN_REFRESH_RATE 250 //ms
+#define SCREEN_REFRESH_RATE 500 //ms
 #define BUTTON_SCAN_RATE 50 //ms
+#define ENC_BUT_LONG_PRESS 1000 //ms
 
 
 
