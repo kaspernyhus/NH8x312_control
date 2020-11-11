@@ -21,11 +21,11 @@ int main() {
 
   updateBaseLayout();
 
-
   while(1) {
     updateScreen();
     check_buttons();
     check_rotary();
     //updateLEDs();
+    // relay_test(1000);
   }
 }

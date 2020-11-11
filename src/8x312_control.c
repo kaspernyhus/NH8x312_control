@@ -22,27 +22,59 @@ void print_SLOTactive() {
   }
 }
 void print_InsertStates() {
-  UART0_puts("------------------\r\n");
+  UART0_puts("---------InsertStates---------\r\n");
   for (int Channel=0; Channel<8; Channel++) {
     for (int Slot=0; Slot<4; Slot++) {
       char string[12];
       sprintf(string,"CH%d/Slot%d: \r\n",Channel,Slot);
       UART0_puts(string);
       UART0_printBits("Insert: ", InsertStates[Channel].Slots[Slot].Insert,4);
-      UART0_printBits("State: ", InsertStates[Channel].Slots[Slot].State,4);
+      UART0_printBits("State:  ", InsertStates[Channel].Slots[Slot].State,4);
       UART0_puts("------------------\r\n");
     }
   }
 }
-void print_Channels() {
-  UART0_puts("------------------\r\n");
-  for (int Channel=0; Channel<12; Channel++) {
-    char string[12];
-    sprintf(string,"CH%d: \r\n",Channel);
-    UART0_puts(string);
-    UART0_printBits("Relays: ", channels[Channel],8);
-    UART0_puts("------------------\r\n");
+void print_channel_routing() {
+  static int first = 1;
+  if (first) {
+    UART0_puts("CIE      CH1      CH2      CH3      CH4      CH5      CH6      CH7      CH8      A        B        C        D\r\n");
+    UART0_puts("--------------------------------------------------------------------------------------------------------------------\r\n");
+    first = 0;
   }
+  
+  for (int i= 0; i<13; i++) {
+    UART0_printBits_nonewline("", channel_routing[i],8);
+    UART0_puts(" ");
+  }
+  UART0_puts("\r\n");
+  
+  // UART0_puts("------------------RELAY ROUTING------------------\r\n");
+  
+  // for (int Channel=0; Channel<13; Channel++) {
+  //   char string[12];
+  //   if (Channel == 0) {
+  //     sprintf(string,"CIE \r\n");
+  //   }
+  //   else if (Channel<9) {
+  //     sprintf(string,"CH%d \r\n",Channel);
+  //   }
+  //   else if (Channel == 9) {
+  //     sprintf(string,"A \r\n");
+  //   }
+  //   else if (Channel == 10) {
+  //     sprintf(string,"B \r\n");
+  //   }
+  //   else if (Channel == 11) {
+  //     sprintf(string,"C \r\n");
+  //   }
+  //   else if (Channel == 12) {
+  //     sprintf(string,"D \r\n");
+  //   }
+    
+  //   UART0_puts(string);
+  //   UART0_printBits("", channel_routing[Channel],8);
+  //   UART0_puts("------------------\r\n");
+  // }
 }
 void stopWatch_Start(char string[]) {
   UART0_puts(string);
@@ -104,7 +136,8 @@ void Init_8x312() {
   last_buttons = 0x00;
   encButLongPress = 0;
 
-  //Init_relays();
+  Init_relays();
+  //print_channel_routing();
 
   SelectActive = 0;
   CHselected = 0;
@@ -305,20 +338,57 @@ void drawLEDs() {
 -------------------------------------------*/
 
 void setAllRelays() {
-  for (int Channel=0; Channel<8; Channel++) { // CH1-8
-    for (int Slot=0; Slot<4; Slot++) { // Slot 1-4 per channel
-      if (InsertStates[Channel].Slots[Slot].Insert != 0) { // if an insert is assigned
-        uint8_t CIE = InsertStates[Channel].CH_enable;
-        channels[0] = (CIE<<Channel);
-        uint8_t Insert = InsertStates[Channel].Slots[Slot].Insert;
-        // Send
-        channels[Channel+1] = (1<<(Insert-1));
-        // Return
-        channels[Channel+1] |= (1<<((Insert-1)+4)); //setting same return as send as default
+  uint8_t insert_1 = 0x00;
+  uint8_t insert_2 = 0x00;
+  uint8_t insert_3 = 0x00;
+  uint8_t insert_4 = 0x00;
+
+  for (int Channel=0; Channel<8; Channel++) {             // CH 1-8
+    if (InsertStates[Channel].Slots[0].Insert != 0) {     // if an insert is assigned to first slot
+      channel_insert_enable(Channel);                     // CIE - Channel Insert Enable
+      
+      // Insert slot 1
+      insert_1 = InsertStates[Channel].Slots[0].Insert-1; // A:0x00 // B:0x01 / C:0x02 / D:0x03
+      send_to(Channel, insert_1);
+      
+      // Insert slot 2
+      if (InsertStates[Channel].Slots[1].Insert != 0) {   // if insert assigned to slot 2
+        insert_2 = InsertStates[Channel].Slots[1].Insert-1;
+        send_to(8+insert_1, insert_2);                    // send insert 1 to insert 2
+
+        // Insert slot 3
+        if (InsertStates[Channel].Slots[2].Insert != 0) { // if insert assigned to slot 3
+          insert_3 = InsertStates[Channel].Slots[2].Insert-1;
+          send_to(8+insert_2, insert_3);                  // send insert 2 to insert 3
+        
+          // Insert slot 4
+          if (InsertStates[Channel].Slots[3].Insert != 0) { // if insert assigned to slot 4
+            insert_4 = InsertStates[Channel].Slots[3].Insert-1;
+            send_to(8+insert_3, insert_4);                // send insert 3 to insert 4
+            
+            // return from insert 4
+            return_from(Channel, insert_4);
+          }
+          // return from insert 3
+          else {
+            return_from(Channel, insert_3);
+          }
+        }
+        // return from insert 2
+        else {
+          return_from(Channel, insert_2);
+        }
+      }
+      // return from insert 1
+      else {
+        return_from(Channel, insert_1);
       }
     }
+    else {
+      channel_insert_disable(Channel); // if no insert assignet to slot 1 -> disable channel inserts
+    }
   }
-  //set_relays();
+  update_relay_states();
 }
 
 
@@ -538,10 +608,8 @@ void confirmIns() {
   incSQ(); // increment selection by 1
   encButLongPress = 0;
 
-  // print_InsertStates();
-
-  //setAllRelays();
-  //print_Channels();
+  setAllRelays();
+  print_channel_routing();
 }
 
 
@@ -556,6 +624,9 @@ void resetInserts() {
 
   drawInsertStates();
   drawInactiveSquares();
+
+  reset_relays();
+  setAllRelays();
 }
 
 

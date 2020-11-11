@@ -14,3 +14,4 @@ void UART0_enableReceive_Itr();
 void UART0_disableReceive_Itr();
 void bob(char str[], int value);
 void UART0_printBits(char str[], uint32_t bitValue, uint16_t bitdepth);
+void UART0_printBits_nonewline(char str[], uint32_t bitValue, uint16_t bitdepth);

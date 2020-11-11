@@ -28,10 +28,12 @@ RELAYS CONTROL
 // #define RETURN_C 6
 // #define RETURN_D 7
 
-#define insertA 0
-#define insertB 1
-#define insertC 2
-#define insertD 3
+#define LATCH_RELAYS 7
+
+// #define insertA 0
+// #define insertB 1
+// #define insertC 2
+// #define insertD 3
 
 
 #include <avr/io.h>
@@ -39,12 +41,17 @@ RELAYS CONTROL
 #include <util/delay.h>
 #include "SPI.h"
 #include "config.h"
+#include "UART.h"
 
 
 void Init_relays();
+void channel_insert_enable(uint8_t CH);
+void channel_insert_disable(uint8_t CH);
 void send_to(uint8_t CH, uint8_t to);
 void return_from(uint8_t CH, uint8_t from);
-void set_relays();
+void update_relay_states();
 void reset_relays();
 
-extern uint8_t channels[13];
+void relay_test();
+
+extern uint8_t channel_routing[13];
