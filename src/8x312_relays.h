@@ -53,5 +53,6 @@ void update_relay_states();
 void reset_relays();
 
 void relay_test();
+void set_relays(uint8_t test[13], uint8_t ch_count);
 
 extern uint8_t channel_routing[13];
